@@ -1,34 +1,30 @@
-import javax.microedition.midlet.*;
 import javax.microedition.lcdui.*;
+import javax.microedition.midlet.MIDlet;
 
 public class TetrisMidlet extends MIDlet {
 
     private Display display;
-    private MenuCanvas menu;
+    private GameCanvasTetris game;
 
-    public void startApp() {
+    public TetrisMidlet() {
         display = Display.getDisplay(this);
-        if(menu == null) menu = new MenuCanvas(this);
-        display.setCurrent(menu);
     }
 
-    public void pauseApp() {}
-
-    public void destroyApp(boolean unconditional) {}
-
-    public void showGame() {
-        display.setCurrent(new GameCanvasTetris(this));
+    protected void startApp() {
+        if(game == null) game = new GameCanvasTetris(this);
+        display.setCurrent(game);
     }
 
-    public void showAbout() {
-        display.setCurrent(new AboutCanvas(this));
+    protected void pauseApp() {}
+
+    protected void destroyApp(boolean unconditional) {}
+
+    public void restartGame() {
+        game = new GameCanvasTetris(this);
+        display.setCurrent(game);
     }
 
-    public void showHelp() {
-        display.setCurrent(new HelpCanvas(this));
-    }
-
-    public void backToMenu() {
-        display.setCurrent(menu);
+    public void exit() {
+        notifyDestroyed();
     }
 }

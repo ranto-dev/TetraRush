@@ -1,236 +1,224 @@
 import javax.microedition.lcdui.*;
-import javax.microedition.lcdui.game.*;
 
-public class GameCanvasTetris extends GameCanvas implements Runnable {
+public class GameCanvasTetris extends Canvas implements Runnable {
+
+    private boolean running = true;
+    private boolean paused = false;
+    private boolean gameOver = false;
+
+    private int cols = 10;
+    private int rows = 18;
+    private int cell = 12;
+
+    private int[][] board = new int[rows][cols];
+    private Piece current;
+
+    private long lastFall = 0;
+    private int fallDelay = 550;
+
+    private int score = 0;
+    private int cleared = 0;
 
     private TetrisMidlet midlet;
-    private boolean running=true, paused=false;
 
-    private int gameOverAlpha = 0;
-    private boolean isGameOver = false;
-
-    private int[][] grid = new int[20][10];
-    private Block current;
-    private int score=0, level=1, lines=0;
-
-    public GameCanvasTetris(TetrisMidlet m){
-        super(true);
-        midlet=m;
-        spawnBlock();
+    public GameCanvasTetris(TetrisMidlet m) {
+        this.midlet = m;
+        spawnPiece();
         new Thread(this).start();
     }
 
-    public void run(){
-        while(running){
-            if(!paused){
-                tick();
-                repaint();
-            }
-            try{ Thread.sleep(Math.max(120,400-(level*40))); }
-            catch(Exception e){}
-        }
-    }
+    public void run() {
+        while(running) {
 
-    private void spawnBlock(){
-        int[][][] shapes = Blocks[random(0,6)];
-        int color = Colors[random(0,7)];
-        current = new Block(shapes,color);
-    }
-
-    private void tick(){
-        if(canMove(0,1)) current.y++;
-        else {
-            lockPiece();
-            clearLines();
-            spawnBlock();
-            if(!canMove(0,0)) gameOver();
-        }
-    }
-
-
-    private void gameOver(){
-        paused = true;
-        isGameOver = true;
-        gameOverAlpha = 0;
-    }
-
-
-    private void drawGameOver(Graphics g){
-        if(!isGameOver) return;
-
-        // Semi-transparent overlay
-        if(gameOverAlpha < 180) gameOverAlpha += 6;
-        g.setColor(0, 0, 0);
-        g.fillRect(0, 0, getWidth(), getHeight());
-
-        int pulse = (int)(Math.abs(Math.sin(System.currentTimeMillis() / 200.0)) * 255);
-
-        g.setColor(255, 60 + pulse/4, 60);
-        g.drawString("GAME OVER", getWidth()/2, getHeight()/2 - 10, Graphics.HCENTER);
-
-        g.setColor(200,200,200);
-        g.drawString("Press FIRE to retry", getWidth()/2, getHeight()/2 + 20, Graphics.HCENTER);
-    }
-
-    private void lockPiece(){
-        int[][] s = current.shape();
-        for(int r=0;r<s.length;r++)
-            for(int c=0;c<s[0].length;c++)
-                if(s[r][c]==1)
-                    grid[current.y+r][current.x+c]=current.color;
-    }
-
-    private void clearLines(){
-        int cleared=0;
-        for(int r=0;r<20;r++){
-            boolean full=true;
-            for(int c=0;c<10;c++)
-                if(grid[r][c]==0) full=false;
-
-            if(full){
-                cleared++;
-                for(int y=r;y>0;y--)
-                    for(int x=0;x<10;x++)
-                        grid[y][x]=grid[y-1][x];
-            }
-        }
-
-        if(cleared>0){
-            score += cleared*100;
-            lines += cleared;
-            if(lines/5 >= level) level++;
-        }
-    }
-
-    private boolean canMove(int dx,int dy){
-        int[][] s=current.shape();
-        for(int r=0;r<s.length;r++)
-            for(int c=0;c<s[0].length;c++)
-                if(s[r][c]==1){
-                    int nx=current.x+c+dx;
-                    int ny=current.y+r+dy;
-                    if(nx<0||nx>=10||ny>=20) return false;
-                    if(ny>=0 && grid[ny][nx]!=0) return false;
+            if(!paused && !gameOver) {
+                long now = System.currentTimeMillis();
+                if(now - lastFall > fallDelay) {
+                    if(canMove(0,1)) current.y++;
+                    else lockPiece();
+                    lastFall = now;
                 }
-        return true;
+            }
+
+            repaint();
+            serviceRepaints();
+
+            try { Thread.sleep(40); } catch(Exception e){}
+        }
     }
 
-    protected void keyPressed(int k){
-        int g=getGameAction(k);
+    protected void paint(Graphics g) {
 
-        if(k==KEY_POUND){ midlet.backToMenu(); return; }
-        if(k==KEY_NUM0){ paused=!paused; repaint(); return; }
-
-        if(paused) return;
-
-        if(g==LEFT && canMove(-1,0)) current.x--;
-        if(g==RIGHT && canMove(1,0)) current.x++;
-        if(g==DOWN && canMove(0,1)) current.y++;
-        if(g==FIRE){
-            current.rotate();
-            if(!canMove(0,0)) current.rotate(); // revert if blocked
+        // Background gradient style
+        for(int i=0;i<getHeight();i++){
+            g.setColor(0,0,i/2);
+            g.drawLine(0,i,getWidth(),i);
         }
 
-        repaint();
-    }
-
-    private void resetGame(){
-        grid = new int[20][10];
-        score = 0; level = 1; lines = 0;
-        isGameOver = false;
-        paused = false;
-        spawnBlock();
-    }
-
-    protected void paint(Graphics g){
-        g.setColor(0,0,0);
-        g.fillRect(0,0,getWidth(),getHeight());
-
+        drawFrame(g);
+        drawGrid(g);
         drawBoard(g);
-        drawUI(g);
-        drawGameOver(g);
+        drawPiece(g);
 
-        if(paused){
-            g.setColor(255,0,0);
-            g.drawString("PAUSED", getWidth()/2, getHeight()/2, Graphics.HCENTER);
-        }
+        drawHUD(g);
+
+        if(paused) drawPause(g);
+        if(gameOver) drawGameOver(g);
+    }
+
+    private void drawFrame(Graphics g){
+        g.setColor(40,40,60);
+        g.fillRect(0,0,cols*cell+6,rows*cell+6);
+
+        g.setColor(0,0,0);
+        g.fillRect(3,3,cols*cell,rows*cell);
+    }
+
+    private void drawGrid(Graphics g){
+        g.setColor(30,30,40);
+        for(int c=0;c<=cols;c++)
+            g.drawLine(c*cell+3, 3, c*cell+3, rows*cell+3);
+        for(int r=0;r<=rows;r++)
+            g.drawLine(3, r*cell+3, cols*cell+3, r*cell+3);
+    }
+
+    private void drawBlock(Graphics g,int x,int y,int r,int gr,int b){
+        g.setColor(r,gr,b);
+        g.fillRect(x,y,cell,cell);
+
+        g.setColor(255,255,255);
+        g.drawLine(x,y,x+cell,y);
+        g.drawLine(x,y,x,y+cell);
+
+        g.setColor(0,0,0);
+        g.drawLine(x,y+cell-1,x+cell,y+cell-1);
+        g.drawLine(x+cell-1,y,x+cell-1,y+cell);
     }
 
     private void drawBoard(Graphics g){
-        int ox=20, oy=20, size=12;
-
-        // frame
-        g.setColor(120,120,120);
-        g.drawRect(ox-3,oy-3,10*size+6,20*size+6);
-
-        // grid blocks
-        for(int y=0;y<20;y++)
-            for(int x=0;x<10;x++)
-                if(grid[y][x]!=0){
-                    g.setColor(grid[y][x]);
-                    g.fillRect(ox+x*size, oy+y*size, size-1,size-1);
-                }
-
-        // current piece
-        int[][] s=current.shape();
-        for(int r=0;r<s.length;r++)
-            for(int c=0;c<s[0].length;c++)
-                if(s[r][c]==1){
-                    g.setColor(current.color);
-                    g.fillRect(ox+(current.x+c)*size, oy+(current.y+r)*size, size-1,size-1);
-                }
+        for(int r=0;r<rows;r++)
+            for(int c=0;c<cols;c++)
+                if(board[r][c]!=0)
+                    drawBlock(g,c*cell+3,r*cell+3,0,150,255);
     }
 
-    private void drawUI(Graphics g){
+    private void drawPiece(Graphics g){
+        g.setColor(255,80,80);
+        for(int i=0;i<4;i++){
+            int px=current.blocks[i][0]+current.x;
+            int py=current.blocks[i][1]+current.y;
+            if(py>=0)
+                drawBlock(g,px*cell+3,py*cell+3,255,80,80);
+        }
+    }
+
+    private void drawHUD(Graphics g){
+        g.setColor(255,255,0);
+        g.drawString("Score: "+score, cols*cell+10, 10, Graphics.LEFT|Graphics.TOP);
+        g.drawString("Lines: "+cleared, cols*cell+10, 28, Graphics.LEFT|Graphics.TOP);
+        g.drawString("0=P Pause", cols*cell+10, 48, Graphics.LEFT|Graphics.TOP);
+        g.drawString("# Quit", cols*cell+10, 66, Graphics.LEFT|Graphics.TOP);
+    }
+
+    private void drawPause(Graphics g){
+        g.setColor(255,255,0);
+        g.drawString("PAUSED", getWidth()/2, getHeight()/2,
+                Graphics.HCENTER | Graphics.BASELINE);
+    }
+
+    private void drawGameOver(Graphics g){
+        int t = (int)((System.currentTimeMillis()/200)%2);
+
+        if(t==0) g.setColor(255,0,0);
+        else g.setColor(255,200,0);
+
+        g.drawString("GAME OVER", getWidth()/2, getHeight()/2 - 10,
+                Graphics.HCENTER | Graphics.BASELINE);
+
         g.setColor(255,255,255);
-        g.drawString("Score: "+score, 5, 4, 0);
-        g.drawString("Lvl: "+level, 100, 4, 0);
+        g.drawString("Press FIRE to restart",
+                getWidth()/2, getHeight()/2 + 15,
+                Graphics.HCENTER | Graphics.BASELINE);
     }
 
-    private static int random(int a,int b){
-        return (int)(Math.random()*(b-a+1))+a;
+    protected void keyPressed(int k){
+        if(gameOver){
+            if(getGameAction(k)==FIRE) midlet.restartGame();
+            return;
+        }
+
+        int a=getGameAction(k);
+
+        if(a==LEFT && canMove(-1,0)) current.x--;
+        if(a==RIGHT && canMove(1,0)) current.x++;
+        if(a==DOWN && canMove(0,1)) current.y++;
+
+        if(a==FIRE) rotate();
+
+        if(k==KEY_NUM0) paused=!paused;
+
+        if(k==KEY_POUND) midlet.exit();
     }
 
-    // --- PIECES & COLORS --------------------------
+    private boolean canMove(int dx,int dy){
+        for(int i=0;i<4;i++){
+            int nx=current.blocks[i][0]+current.x+dx;
+            int ny=current.blocks[i][1]+current.y+dy;
 
-    private static final int[][][][] Blocks = {
+            if(nx<0||nx>=cols||ny>=rows) return false;
+            if(ny>=0 && board[ny][nx]!=0) return false;
+        }
+        return true;
+    }
 
-        // I
-        {{{1,1,1,1}},
-         {{1},{1},{1},{1}}},
+    private void lockPiece(){
+        for(int i=0;i<4;i++){
+            int nx=current.blocks[i][0]+current.x;
+            int ny=current.blocks[i][1]+current.y;
+            if(ny>=0) board[ny][nx]=1;
+        }
+        clearLines();
+        spawnPiece();
 
-        // O
-        {{{1,1},{1,1}}},
+        if(!canMove(0,0)){
+            gameOver=true;
+            paused=false;
+        }
+    }
 
-        // T
-        {{{1,1,1},{0,1,0}},
-         {{1,0},{1,1},{1,0}},
-         {{0,1,0},{1,1,1}},
-         {{0,1},{1,1},{0,1}}},
+    private void clearLines(){
+        for(int r=rows-1;r>=0;r--){
+            boolean full=true;
+            for(int c=0;c<cols;c++)
+                if(board[r][c]==0){ full=false; break; }
 
-        // L
-        {{{1,1,1},{1,0,0}},
-         {{1,1},{0,1},{0,1}},
-         {{0,0,1},{1,1,1}},
-         {{1,0},{1,0},{1,1}}},
+            if(full){
+                score += 100;
+                cleared++;
 
-        // J
-        {{{1,1,1},{0,0,1}},
-         {{0,1},{0,1},{1,1}},
-         {{1,0,0},{1,1,1}},
-         {{1,1},{1,0},{1,0}}},
+                for(int y=r;y>0;y--)
+                    for(int c=0;c<cols;c++)
+                        board[y][c]=board[y-1][c];
 
-        // S
-        {{{0,1,1},{1,1,0}},
-         {{1,0},{1,1},{0,1}}},
+                r++;
+            }
+        }
+    }
 
-        // Z
-        {{{1,1,0},{0,1,1}},
-         {{0,1},{1,1},{1,0}}}
-    };
+    private void rotate(){
+        int[][] tmp=new int[4][2];
+        for(int i=0;i<4;i++){
+            tmp[i][0]=-current.blocks[i][1];
+            tmp[i][1]= current.blocks[i][0];
+        }
 
-    private static final int[] Colors = {
-        0x00CCFF, 0xFFCC00, 0xFF6699,
-        0x66FF33, 0xFF6600, 0x9999FF, 0xFF3366
-    };
+        int[][] old=current.blocks;
+        current.blocks=tmp;
+        if(!canMove(0,0)) current.blocks=old;
+    }
+
+    private void spawnPiece(){
+        current=Piece.randomPiece();
+        current.x=cols/2-1;
+        current.y=-2;
+    }
 }
