@@ -189,10 +189,13 @@ public class GameCanvasTetris extends Canvas implements Runnable {
 
         // Game Over overlay clignotant
         if (gameState == STATE_GAME_OVER) {
-            int flash = (int) ((System.currentTimeMillis() / 300) % 2);
-            g.setColor(flash == 0 ? 255 : 255);
+            int rectWidth = 200;
+            int rectHeigth = 100;
+            g.setColor(200,0,0);
+            g.fillRect((getWidth() / 2) - (rectWidth / 2) , (getHeight() / 2) - (rectHeigth / 2), rectWidth, rectHeigth);
+            g.setColor(255,255, 0);
             g.drawString("GAME OVER", getWidth() / 2, getHeight() / 2 - 10, Graphics.HCENTER | Graphics.BASELINE);
-            g.setColor(255, 255, 255);
+            g.setColor(255,255,255);
             g.drawString("Press FIRE touch to restart", getWidth() / 2, getHeight() / 2 + 15, Graphics.HCENTER | Graphics.BASELINE);
         }
     }
@@ -209,7 +212,7 @@ public class GameCanvasTetris extends Canvas implements Runnable {
         }
     }
 
-    // Draw piece function 
+    // Draw piece function
     private void drawPiece(Graphics g, int offsetX, int offsetY) {
         for (int r = 0; r < 4; r++)
         for (int c = 0; c < 4; c++)
