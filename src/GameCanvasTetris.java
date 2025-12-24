@@ -2,24 +2,27 @@ import javax.microedition.lcdui.*;
 
 public class GameCanvasTetris extends Canvas implements Runnable {
 
-    private boolean running = true;
-    private boolean paused = false;
-    private boolean gameOver = false;
+    private static final int STATE_MENU = 0;
+    private static final int STATE_PLAY = 1;
+    private static final int STATE_PAUSE = 2;
+    private static final int STATE_GAME_OVER = 3;
 
-    private int cols = 10;
-    private int rows = 18;
-    private int cell = 12;
-
-    private int[][] board = new int[rows][cols];
-    private Piece current;
-
-    private long lastFall = 0;
-    private int fallDelay = 550;
-
-    private int score = 0;
-    private int cleared = 0;
+    private int gameState = STATE_PLAY;
 
     private TetrisMidlet midlet;
+    private boolean running = true;
+
+    private int COLS = 10;
+    private int ROWS = 18;
+    private int cell = 10;
+
+    private int[][] board = new int[ROWS][COLS];
+
+    private Piece current;
+    private int curX, curY;
+
+    private long tick = 0;
+    private int score = 0;
 
     public GameCanvasTetris(TetrisMidlet m) {
         this.midlet = m;
@@ -30,195 +33,165 @@ public class GameCanvasTetris extends Canvas implements Runnable {
     public void run() {
         while(running) {
 
-            if(!paused && !gameOver) {
-                long now = System.currentTimeMillis();
-                if(now - lastFall > fallDelay) {
-                    if(canMove(0,1)) current.y++;
-                    else lockPiece();
-                    lastFall = now;
+            if(gameState == STATE_PLAY) {
+                long t = System.currentTimeMillis();
+                if(t - tick > 500) {
+                    tick = t;
+                    drop();
                 }
             }
 
             repaint();
             serviceRepaints();
 
-            try { Thread.sleep(40); } catch(Exception e){}
+            try { Thread.sleep(60); } catch(Exception e){}
         }
     }
 
-    protected void paint(Graphics g) {
+    private void spawnPiece() {
+        current = Piece.random();
+        curX = COLS/2 - 1;
+        curY = 0;
 
-        // Background gradient style
-        for(int i=0;i<getHeight();i++){
-            g.setColor(0,0,i/2);
-            g.drawLine(0,i,getWidth(),i);
-        }
-
-        drawFrame(g);
-        drawGrid(g);
-        drawBoard(g);
-        drawPiece(g);
-
-        drawHUD(g);
-
-        if(paused) drawPause(g);
-        if(gameOver) drawGameOver(g);
-    }
-
-    private void drawFrame(Graphics g){
-        g.setColor(40,40,60);
-        g.fillRect(0,0,cols*cell+6,rows*cell+6);
-
-        g.setColor(0,0,0);
-        g.fillRect(3,3,cols*cell,rows*cell);
-    }
-
-    private void drawGrid(Graphics g){
-        g.setColor(30,30,40);
-        for(int c=0;c<=cols;c++)
-            g.drawLine(c*cell+3, 3, c*cell+3, rows*cell+3);
-        for(int r=0;r<=rows;r++)
-            g.drawLine(3, r*cell+3, cols*cell+3, r*cell+3);
-    }
-
-    private void drawBlock(Graphics g,int x,int y,int r,int gr,int b){
-        g.setColor(r,gr,b);
-        g.fillRect(x,y,cell,cell);
-
-        g.setColor(255,255,255);
-        g.drawLine(x,y,x+cell,y);
-        g.drawLine(x,y,x,y+cell);
-
-        g.setColor(0,0,0);
-        g.drawLine(x,y+cell-1,x+cell,y+cell-1);
-        g.drawLine(x+cell-1,y,x+cell-1,y+cell);
-    }
-
-    private void drawBoard(Graphics g){
-        for(int r=0;r<rows;r++)
-            for(int c=0;c<cols;c++)
-                if(board[r][c]!=0)
-                    drawBlock(g,c*cell+3,r*cell+3,0,150,255);
-    }
-
-    private void drawPiece(Graphics g){
-        g.setColor(255,80,80);
-        for(int i=0;i<4;i++){
-            int px=current.blocks[i][0]+current.x;
-            int py=current.blocks[i][1]+current.y;
-            if(py>=0)
-                drawBlock(g,px*cell+3,py*cell+3,255,80,80);
+        if(collides(curX, curY, current)) {
+            gameState = STATE_GAME_OVER;
         }
     }
 
-    private void drawHUD(Graphics g){
-        g.setColor(255,255,0);
-        g.drawString("Score: "+score, cols*cell+10, 10, Graphics.LEFT|Graphics.TOP);
-        g.drawString("Lines: "+cleared, cols*cell+10, 28, Graphics.LEFT|Graphics.TOP);
-        g.drawString("0=P Pause", cols*cell+10, 48, Graphics.LEFT|Graphics.TOP);
-        g.drawString("# Quit", cols*cell+10, 66, Graphics.LEFT|Graphics.TOP);
-    }
-
-    private void drawPause(Graphics g){
-        g.setColor(255,255,0);
-        g.drawString("PAUSED", getWidth()/2, getHeight()/2,
-                Graphics.HCENTER | Graphics.BASELINE);
-    }
-
-    private void drawGameOver(Graphics g){
-        int t = (int)((System.currentTimeMillis()/200)%2);
-
-        if(t==0) g.setColor(255,0,0);
-        else g.setColor(255,200,0);
-
-        g.drawString("GAME OVER", getWidth()/2, getHeight()/2 - 10,
-                Graphics.HCENTER | Graphics.BASELINE);
-
-        g.setColor(255,255,255);
-        g.drawString("Press FIRE to restart",
-                getWidth()/2, getHeight()/2 + 15,
-                Graphics.HCENTER | Graphics.BASELINE);
-    }
-
-    protected void keyPressed(int k){
-        if(gameOver){
-            if(getGameAction(k)==FIRE) midlet.restartGame();
-            return;
+    private boolean collides(int x, int y, Piece p) {
+        for(int r=0;r<4;r++)
+        for(int c=0;c<4;c++) {
+            if(p.shape[r][c]==1) {
+                int nx=x+c, ny=y+r;
+                if(ny<0 || ny>=ROWS || nx<0 || nx>=COLS) return true;
+                if(board[ny][nx]==1) return true;
+            }
         }
-
-        int a=getGameAction(k);
-
-        if(a==LEFT && canMove(-1,0)) current.x--;
-        if(a==RIGHT && canMove(1,0)) current.x++;
-        if(a==DOWN && canMove(0,1)) current.y++;
-
-        if(a==FIRE) rotate();
-
-        if(k==KEY_NUM0) paused=!paused;
-
-        if(k==KEY_POUND) midlet.exit();
+        return false;
     }
 
-    private boolean canMove(int dx,int dy){
-        for(int i=0;i<4;i++){
-            int nx=current.blocks[i][0]+current.x+dx;
-            int ny=current.blocks[i][1]+current.y+dy;
-
-            if(nx<0||nx>=cols||ny>=rows) return false;
-            if(ny>=0 && board[ny][nx]!=0) return false;
-        }
-        return true;
-    }
-
-    private void lockPiece(){
-        for(int i=0;i<4;i++){
-            int nx=current.blocks[i][0]+current.x;
-            int ny=current.blocks[i][1]+current.y;
-            if(ny>=0) board[ny][nx]=1;
+    private void mergePiece() {
+        for(int r=0;r<4;r++)
+        for(int c=0;c<4;c++) {
+            if(current.shape[r][c]==1) {
+                board[curY+r][curX+c]=1;
+            }
         }
         clearLines();
         spawnPiece();
-
-        if(!canMove(0,0)){
-            gameOver=true;
-            paused=false;
-        }
     }
 
-    private void clearLines(){
-        for(int r=rows-1;r>=0;r--){
+    private void clearLines() {
+        for(int r=0;r<ROWS;r++) {
             boolean full=true;
-            for(int c=0;c<cols;c++)
-                if(board[r][c]==0){ full=false; break; }
+            for(int c=0;c<COLS;c++)
+                if(board[r][c]==0) full=false;
 
             if(full){
-                score += 100;
-                cleared++;
-
+                score+=100;
                 for(int y=r;y>0;y--)
-                    for(int c=0;c<cols;c++)
-                        board[y][c]=board[y-1][c];
-
-                r++;
+                    for(int x=0;x<COLS;x++)
+                        board[y][x]=board[y-1][x];
             }
         }
     }
 
-    private void rotate(){
-        int[][] tmp=new int[4][2];
-        for(int i=0;i<4;i++){
-            tmp[i][0]=-current.blocks[i][1];
-            tmp[i][1]= current.blocks[i][0];
-        }
-
-        int[][] old=current.blocks;
-        current.blocks=tmp;
-        if(!canMove(0,0)) current.blocks=old;
+    private void drop() {
+        if(!collides(curX, curY+1, current)) curY++;
+        else mergePiece();
     }
 
-    private void spawnPiece(){
-        current=Piece.randomPiece();
-        current.x=cols/2-1;
-        current.y=-2;
+    private void move(int dx) {
+        if(!collides(curX+dx, curY, current)) curX+=dx;
+    }
+
+    private void rotate() {
+        Piece t = current.rotated();
+        if(!collides(curX, curY, t)) current = t;
+    }
+
+    protected void keyPressed(int k) {
+
+        // GAME OVER
+        if(gameState == STATE_GAME_OVER) {
+            int a=getGameAction(k);
+            if(a==FIRE) midlet.restartGame();
+            if(k==KEY_POUND) midlet.backToMenu();
+            return;
+        }
+
+        // PAUSE
+        if(gameState == STATE_PAUSE) {
+            int a=getGameAction(k);
+            if(a==FIRE) gameState = STATE_PLAY;
+            if(k==KEY_POUND) midlet.backToMenu();
+            return;
+        }
+
+        // TOGGLE PAUSE
+        if(k==KEY_STAR) {
+            gameState = (gameState==STATE_PLAY)?STATE_PAUSE:STATE_PLAY;
+            return;
+        }
+
+        // PLAY INPUT ONLY WHEN PLAYING
+        if(gameState != STATE_PLAY) return;
+
+        int a=getGameAction(k);
+
+        if(a==LEFT) move(-1);
+        else if(a==RIGHT) move(1);
+        else if(a==DOWN) drop();
+        else if(a==FIRE) rotate();
+
+        if(k==KEY_POUND) midlet.backToMenu();
+    }
+
+    protected void paint(Graphics g) {
+
+        g.setColor(0,0,30);
+        g.fillRect(0,0,getWidth(),getHeight());
+
+        drawBoard(g);
+        drawPiece(g);
+
+        g.setColor(255,255,0);
+        g.drawString("Score: "+score, 2, 2, Graphics.TOP|Graphics.LEFT);
+
+        if(gameState == STATE_PAUSE) {
+            g.setColor(0,0,0);
+            g.fillRect(20,60,100,40);
+            g.setColor(255,255,0);
+            g.drawString("PAUSED",70,80,Graphics.HCENTER|Graphics.BASELINE);
+            return;
+        }
+
+        if(gameState == STATE_GAME_OVER) {
+            g.setColor(200,0,0);
+            g.fillRect(10,60,120,50);
+            g.setColor(255,255,0);
+            g.drawString("GAME OVER",70,75,Graphics.HCENTER|Graphics.BASELINE);
+            g.drawString("FIRE=Restart",70,95,Graphics.HCENTER|Graphics.BASELINE);
+        }
+    }
+
+    private void drawBoard(Graphics g) {
+        for(int r=0;r<ROWS;r++)
+        for(int c=0;c<COLS;c++) {
+            if(board[r][c]==1){
+                g.setColor(0,180,255);
+                g.fillRect(c*cell,r*cell,cell,cell);
+                g.setColor(0,0,80);
+                g.drawRect(c*cell,r*cell,cell,cell);
+            }
+        }
+    }
+
+    private void drawPiece(Graphics g) {
+        g.setColor(255,120,0);
+        for(int r=0;r<4;r++)
+        for(int c=0;c<4;c++)
+            if(current.shape[r][c]==1)
+                g.fillRect((curX+c)*cell,(curY+r)*cell,cell,cell);
     }
 }
