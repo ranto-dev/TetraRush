@@ -1,7 +1,13 @@
+/**
+ * Canvas: TetriseGame
+ */
 import javax.microedition.lcdui.*;
 
 public class GameCanvasTetris extends Canvas implements Runnable {
 
+    /**
+     * Les attributs
+     */ 
     private static final int STATE_PLAY = 1;
     private static final int STATE_PAUSE = 2;
     private static final int STATE_GAME_OVER = 3;
@@ -24,6 +30,10 @@ public class GameCanvasTetris extends Canvas implements Runnable {
     private int score = 0;
     private int lines = 0;
 
+
+    /**
+     * Constructeur
+     */
     public GameCanvasTetris(TetrisMidlet m) {
         this.midlet = m;
         current = Piece.random();
@@ -33,6 +43,12 @@ public class GameCanvasTetris extends Canvas implements Runnable {
         new Thread(this).start();
     }
 
+
+    /**
+     * Les méthodes
+     */
+
+    // fonction principale pour lancer une partie
     public void run() {
         while (running) {
             if (gameState == STATE_PLAY) {
@@ -48,6 +64,21 @@ public class GameCanvasTetris extends Canvas implements Runnable {
         }
     }
 
+    // retourner tous les couleurs de chaque piece
+    private int getColor(int t) {
+        switch (t) {
+            case 1: return 0xFF0000; // red
+            case 2: return 0x00FF00; // green
+            case 3: return 0x0000FF; // blue
+            case 4: return 0xFFFF00; // yellow
+            case 5: return 0xFF00FF; // magenta
+            case 6: return 0x00FFFF; // cyan
+            case 7: return 0xFFA500; // orange
+            default: return 0xFFFFFF; // white
+        }
+    }
+
+    // fonction qui fraye les pieces
     private void spawnPiece() {
         current = nextPiece;
         nextPiece = Piece.random();
@@ -56,6 +87,7 @@ public class GameCanvasTetris extends Canvas implements Runnable {
         if (collides(curX, curY, current)) gameState = STATE_GAME_OVER;
     }
 
+    // fonction de collision
     private boolean collides(int x, int y, Piece p) {
         for (int r = 0; r < 4; r++)
         for (int c = 0; c < 4; c++) {
@@ -69,6 +101,7 @@ public class GameCanvasTetris extends Canvas implements Runnable {
         return false;
     }
 
+    //  fonction qui gére la fusion entre deux et plusieurs pièces
     private void mergePiece() {
         for (int r = 0; r < 4; r++)
         for (int c = 0; c < 4; c++) {
@@ -82,6 +115,11 @@ public class GameCanvasTetris extends Canvas implements Runnable {
         spawnPiece();
     }
 
+    /**
+     * fonction que gère la suppréssion d'une ou plusieurs lignes
+     * Si la fusion des pièces forme une ligne alors on supprime cette ligne formée puis on fusionne les bloques supérieurs au bloque de pièce inférieur  (en boucle)
+     * Sinon, on ne supprime rien
+     */
     private void clearLines() {
         for (int r = ROWS - 1; r >= 0; r--) {
             boolean full = true;
@@ -103,15 +141,18 @@ public class GameCanvasTetris extends Canvas implements Runnable {
         else mergePiece();
     }
 
+    // fonction qui nous permet d'éffecteur une déplacement d'une pièce
     private void move(int dx) {
         if (!collides(curX + dx, curY, current)) curX += dx;
     }
 
+    // fonction qui gère la rotation d'une pièce
     private void rotate() {
         Piece t = current.rotated();
         if (!collides(curX, curY, t)) current = t;
     }
 
+    // fonction qui gère tous les évenement `click` possible dans le jeu
     protected void keyPressed(int k) {
         if (gameState == STATE_GAME_OVER) {
             int a = getGameAction(k);
@@ -140,6 +181,7 @@ public class GameCanvasTetris extends Canvas implements Runnable {
         if (k == KEY_POUND) midlet.backToMenu();
     }
 
+    // fonction qui s'occupe de peindre les objects graphiques
     protected void paint(Graphics g) {
         // Fond général
         g.setColor(20, 20, 40);
@@ -200,6 +242,7 @@ public class GameCanvasTetris extends Canvas implements Runnable {
         }
     }
 
+    // fonction qui s'occupe de la création du tableau de jeu sous forme d'une grille 
     private void drawBoard(Graphics g, int offsetX, int offsetY) {
         for (int r = 0; r < ROWS; r++)
         for (int c = 0; c < COLS; c++) {
@@ -212,7 +255,7 @@ public class GameCanvasTetris extends Canvas implements Runnable {
         }
     }
 
-    // Draw piece function
+    // fonction qui s'occupe de peindre les pièces dans la grille du jeu
     private void drawPiece(Graphics g, int offsetX, int offsetY) {
         for (int r = 0; r < 4; r++)
         for (int c = 0; c < 4; c++)
@@ -224,7 +267,7 @@ public class GameCanvasTetris extends Canvas implements Runnable {
             }
     }
 
-    // Drow next piace function
+    // fonction qui peint la piece suivant (qui se trouve juste à droit de la grille du jeu principale )
     private void drawNextPiece(Graphics g, int offsetX, int offsetY) {
         g.setColor(255, 255, 255);
         g.drawString("Next:", offsetX, offsetY, Graphics.TOP | Graphics.LEFT);
@@ -236,19 +279,5 @@ public class GameCanvasTetris extends Canvas implements Runnable {
                 g.setColor(0, 0, 0);
                 g.drawRect(offsetX + c * CELL, offsetY + 15 + r * CELL, CELL, CELL);
             }
-    }
-
-    // Get color appropriate to piece function
-    private int getColor(int t) {
-        switch (t) {
-            case 1: return 0xFF0000; // red
-            case 2: return 0x00FF00; // green
-            case 3: return 0x0000FF; // blue
-            case 4: return 0xFFFF00; // yellow
-            case 5: return 0xFF00FF; // magenta
-            case 6: return 0x00FFFF; // cyan
-            case 7: return 0xFFA500; // orange
-            default: return 0xFFFFFF; // white
-        }
     }
 }

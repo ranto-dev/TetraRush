@@ -1,3 +1,6 @@
+/**
+ * Midlet principal: TetrisMidlet
+ */
 import javax.microedition.midlet.*;
 import javax.microedition.lcdui.*;
 
@@ -6,15 +9,13 @@ public class TetrisMidlet extends MIDlet implements CommandListener {
     private Display display;
     private List menuScreen;
     private GameCanvasTetris gameCanvas;
-
     private Command cmdBack = new Command("Back", Command.BACK, 1);
     private Command cmdExit = new Command("Exit", Command.EXIT, 2);
 
     public void startApp() {
         display = Display.getDisplay(this);
 
-        // Menu principal comme une liste de jeu
-        menuScreen = new List("TETRIS MIDP", Choice.IMPLICIT);
+        menuScreen = new List("TETRIS GAME", Choice.IMPLICIT);
         menuScreen.append("1. Commencer une partie", null);
         menuScreen.append("2. A propos du jeu", null);
         menuScreen.append("3. Aide", null);
@@ -38,10 +39,12 @@ public class TetrisMidlet extends MIDlet implements CommandListener {
         if (d == menuScreen) {
             int idx = menuScreen.getSelectedIndex();
             switch (idx) {
-                case 0: // Commencer partie
+                case 0: 
+                    // Commencer partie
                     restartGame();
                     break;
-                case 1: // A propos
+                case 1: 
+                    // section "A propos"
                     Form about = new Form("A propos");
                     about.append(
                         "Mini Tetris Game\n" +
@@ -52,7 +55,8 @@ public class TetrisMidlet extends MIDlet implements CommandListener {
                     about.setCommandListener(this);
                     display.setCurrent(about);
                     break;
-                case 2: // Aide
+                case 2: 
+                    // section "Aide"
                     Form help = new Form("Aide");
                     help.append(
                         "Comment jouer ?\n\n" +
