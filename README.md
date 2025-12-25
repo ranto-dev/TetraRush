@@ -35,6 +35,12 @@ D’une part pour pratiquer et renforcer mes compétences en Java, en particulie
 - **CLDC 1.1 / MIDP 1.0**
 - Java **JDK 1.8.0_202 (32 bits)**
 
+## 📸 Aperçu
+
+le projet est compatible sur plusieurs plateforme MicroEdition.
+
+![demon avec blackberry](./demo.png)
+
 ## 👤 Auteur
 
 - **rantodev** — [http://ranto-dev.vercel.app](http://ranto-dev.vercel.app)

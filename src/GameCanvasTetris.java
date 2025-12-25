@@ -176,7 +176,7 @@ public class GameCanvasTetris extends Canvas implements Runnable {
         if (a == LEFT) move(-1);
         else if (a == RIGHT) move(1);
         else if (a == DOWN) drop();
-        else if (a == FIRE) rotate();
+        else if (a == UP) rotate();
 
         if (k == KEY_POUND) midlet.backToMenu();
     }

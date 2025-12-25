@@ -15,8 +15,8 @@ public class TetrisMidlet extends MIDlet implements CommandListener {
     public void startApp() {
         display = Display.getDisplay(this);
 
-        menuScreen = new List("TETRIS GAME", Choice.IMPLICIT);
-        menuScreen.append("1. Commencer une partie", null);
+        menuScreen = new List("Tetra Rush", Choice.IMPLICIT);
+        menuScreen.append("1. Commencer une nouvelle partie", null);
         menuScreen.append("2. A propos du jeu", null);
         menuScreen.append("3. Aide", null);
 
@@ -47,9 +47,14 @@ public class TetrisMidlet extends MIDlet implements CommandListener {
                     // section "A propos"
                     Form about = new Form("A propos");
                     about.append(
-                        "Mini Tetris Game\n" +
-                        "Java ME MIDP 1.0\n" +
-                        "Student Project\n"
+                        " ~ Tetra Rush ~ \n\n" +
+                        "         Tout le monde connaît le célèbre jeu \"Tetris\", l\'un des jeux les plus iconiques de l\'histoire du jeu vidéo, largement présent sur les appareils MicroEdition." +
+                        " Pourquoi développer cette application ? " +
+                        " D\'une part pour pratiquer et renforcer mes compétences en Java, en particulier dans le développement MicroEdition. D\'autre part, pour le plaisir, et par passion pour les jeux rétro qui ont marqué l\'histoire." +
+                        " --------------------- \n" +
+                        "Autheur: Ranto andrianandraina\n" +
+                        "         http://ranto-dev.vercel.app \n" +
+                        "         http://github.com/ranto-dev \n"
                     );
                     about.addCommand(cmdBack);
                     about.setCommandListener(this);
@@ -59,12 +64,26 @@ public class TetrisMidlet extends MIDlet implements CommandListener {
                     // section "Aide"
                     Form help = new Form("Aide");
                     help.append(
-                        "Comment jouer ?\n\n" +
-                        "- LEFT / RIGHT: Déplacer\n" +
-                        "- FIRE: Tourner\n" +
-                        "- DOWN: Descendre\n" +
-                        "- * Pause\n" +
-                        "- # Menu\n"
+                        " ~ AIDE - Commandes du jeu ~ \n\n" +
+                        "Déplacement de la pièce :\n" +
+                        "    - Gauche  : Touche Directionnelle Gauche\n" +
+                        "    - Droite  : Touche Directionnelle Droite \n" +
+                        "Rotation :\n" +
+                        "   - Tourner la pièce : Touche Directionnelle Haut\n" +
+                        "Vitesse de descente :\n" +
+                        "    - Accélérer la descente : Touche Directionnelle Bas\n" +
+                        "Gestion du jeu :\n" +
+                        "    - Pause / Reprendre : Touche 0\n" +
+                        "    - Quitter la partie : Touche #\n" +
+                        "    - Valider / OK / Jouer : Touche centrale ou FIRE\n" +
+
+                        "Objectif du jeu :\n" +
+                        "    Alignez une ligne complète de blocs pour la faire disparaître" +
+                        "et gagner des points. Le jeu se termine lorsque les pièces" +
+                        "atteignent le haut de la grille.\n" +
+
+                        "Astuce : Anticipez la prochaine pièce pour mieux planifier vos mouvements.\n" +
+                        "----- Bonne chance et amusez-vous ! -----"
                     );
                     help.addCommand(cmdBack);
                     help.setCommandListener(this);
